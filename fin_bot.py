@@ -58,9 +58,9 @@ def main():
 
 def bot_start(bot, update):
     text = dedent('''\
-    This is financial bot.
+    This bot can calculate monthly payments, loan amount or term.
 
-    Enter command to start calculation.''')
+    Enter 'Payment', 'Credit Sum' or 'Term' to start calculation.''')
     reply_keyboard = [['Payment', 'Credit Sum'], ['Term']]
     update.message.reply_text(text, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
 
