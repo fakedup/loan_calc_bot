@@ -61,24 +61,26 @@ def bot_start(bot, update):
     This is financial bot.
 
     Enter command to start calculation.''')
-    reply_keyboard = [['Payment', 'Credit Sum'], ['Rate', 'Term']]
+    reply_keyboard = [['Payment', 'Credit Sum'], ['Term']]
     update.message.reply_text(text, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
 
 def calc_start(bot, update, chat_data):
     func_choice = update.message.text 
     chat_data['loan'] = loan_calc.Loan()
     chat_data['choice'] = func_choice
-    update.message.reply_text('You chose to calc {}. Now enter sum or /cancel.'.format(func_choice))
-    if func_choice == 'Payment' or func_choice == 'Rate':
+    if func_choice == 'Payment' or func_choice == 'Rate' or func_choice == 'Term':
+        update.message.reply_text('You chose to calc {}. Now enter sum or /cancel.'.format(func_choice))
         return SUM
     elif func_choice == 'Credit Sum':
+        update.message.reply_text('You chose to calc {}. Now enter payment or /cancel.'.format(func_choice))
         return PAYMENT
 
 def get_sum (bot, update, chat_data):
     # update.message.reply_text(chat_data['loan'].get_loan_parameters())
     choice = chat_data['choice']
+    summ = update.message.text.replace(',','.')
     try:
-        summ = float(update.message.text)
+        summ = float(summ)
     except:
         update.message.reply_text('Invalid data. You chose to calc {}. Now enter sum or /cancel.'.format(chat_data['choice']))
         return SUM
@@ -86,20 +88,22 @@ def get_sum (bot, update, chat_data):
     if choice == 'Payment':
         update.message.reply_text('Now enter rate.')
         return RATE
-    elif choice == 'Rate':
+    elif choice == 'Rate' or choice == 'Term':
         update.message.reply_text('Now enter payment.')
         return PAYMENT
 
 def get_payment(bot, update, chat_data):
     # update.message.reply_text(chat_data['loan'].get_loan_parameters())
     choice = chat_data['choice']
+    loan = chat_data['loan']
+    payment = update.message.text.replace(',','.')
     try:
-        payment = float(update.message.text)
+        payment = float(payment)
     except:
         update.message.reply_text('Invalid data. You chose to calc {}. Now enter sum or /cancel.'.format(chat_data['choice']))
         return PAYMENT
-    chat_data['loan'].set_payment(payment)
-    if choice == 'Credit Sum':
+    loan.set_payment(payment)
+    if choice == 'Credit Sum' or 'Term':
         update.message.reply_text('Now enter rate.')
         return RATE
     elif choice == 'Rate':
@@ -111,15 +115,32 @@ def get_payment(bot, update, chat_data):
 def get_rate(bot, update, chat_data):
     # update.message.reply_text(chat_data['loan'].get_loan_parameters())
     choice = chat_data['choice']
+    loan = chat_data['loan']
+    rate = update.message.text
+    factor = 1
+    if '%' in rate:
+        rate = rate.replace('%', '').replace(',','.')
+        factor = 100
     try:
-        rate = float(update.message.text)
+        rate = float(rate)
     except:
         update.message.reply_text('Invalid data. You chose to calc {}. Now enter sum or /cancel.'.format(chat_data['choice']))
         return RATE
-    chat_data['loan'].set_rate(rate)
+    if rate>1:
+        factor = 100
+    rate = rate / factor
+    loan.set_rate(rate)
     if choice == 'Payment' or choice == 'Credit Sum':
         update.message.reply_text('Now enter term (number of months).')
         return TERM
+    elif choice == 'Term':
+        loan.calc_term()
+        update.message.reply_text(loan.get_loan_parameters())
+        user = update.message.from_user
+        user_name = str(user.id) + ' ' + user.first_name + ' ' + user.last_name
+        write_user_action_log (user_calculations_log_file, user_name, loan.get_log_string())
+        clear_chat_data (chat_data)       
+        return ConversationHandler.END
 
 def get_term(bot, update, chat_data):
     choice = chat_data['choice']

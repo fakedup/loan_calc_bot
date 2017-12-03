@@ -1,3 +1,5 @@
+from math import log
+
 class Loan():
     """
     Class to hold options of a loan: sum, payment, rate and term.
@@ -14,7 +16,10 @@ class Loan():
         if self.is_consistent:
             return self.payment
         elif all([self.summ, self.rate, self.term]) > 0:
-            self.payment = (self.summ * self.rate/12)/(1-(1+self.rate/12)**(1-self.term))
+            self.payment = ( 
+                            self.summ * self.rate/12*((1+self.rate/12)**self.term) / 
+                            ((1+self.rate/12)**self.term - 1)
+                            )
             self.is_consistent = True
             return self.payment
         else:
@@ -24,7 +29,11 @@ class Loan():
         if self.is_consistent:
             return self.summ
         elif all([self.payment, self.rate, self.term]) > 0:
-            self.summ = self.payment*(1-1/((1+self.rate/12)**self.term))*self.rate/12
+            self.summ = (
+                        self.payment /
+                        (self.rate/12*((1+self.rate/12)**self.term) / 
+                            ((1+self.rate/12)**self.term - 1))
+                        )
             self.is_consistent = True
             return self.summ
         else:
@@ -38,10 +47,22 @@ class Loan():
             self.is_consistent = True
             return self.summ
         else:
-            raise AttributeError ('Some parameters are missing or zero. Unable to calculate.')       
+            raise AttributeError ('Some parameters are missing or zero. Unable to calculate.')
 
     def calc_term(self):
-        pass
+        if self.is_consistent:
+            return self.rate
+        elif all([self.summ, self.payment, self.rate]) > 0:
+            self.term = ( 
+                        ( log(self.payment/self.summ) - log(self.payment/self.summ - self.rate/12)) /
+                        log(1 + self.rate/12)
+                        )
+            self.is_consistent = True
+            return self.term
+        else:
+            raise AttributeError ('Some parameters are missing or zero. Unable to calculate.')
+
+
 
     def set_summ(self, summ):
         self.summ = summ
@@ -60,7 +81,7 @@ class Loan():
         self.is_consistent = False
 
     def get_loan_parameters(self):
-        text = 'Sum: {0:,.2f},\npayment: {1:,.2f},\nrate: {2:.2f}%,\nterm: {3}.'
+        text = 'Sum: {0:,.2f};\npayment: {1:,.2f};\nrate: {2:.2f}%;\nterm: {3:.2f} months.'
         if self.is_consistent:
             return text.format(self.summ, self.payment, self.rate*100, self.term).replace(',', ' ')
         else:
